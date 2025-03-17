@@ -16,6 +16,7 @@ from tqdm import tqdm
 import wandb
 from evaluate import evaluate
 from unet import UNet
+from unet.unet_model import UNetImprove
 from utils.data_loading import BasicDataset, CarvanaDataset
 from utils.dice_score import dice_loss
 
@@ -29,6 +30,7 @@ def train_model(
         device,
         epochs: int = 5,
         batch_size: int = 1,
+        category_list: list[str]=['0','1'],
         learning_rate: float = 1e-5,
         val_percent: float = 0.1,
         save_checkpoint: bool = True,
@@ -40,9 +42,9 @@ def train_model(
 ):
     # 1. Create dataset
     try:
-        dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
+        dataset = CarvanaDataset(dir_img, dir_mask, img_scale,category_list)
     except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = BasicDataset(dir_img, dir_mask, img_scale,'_mask',category_list)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -50,7 +52,7 @@ def train_model(
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    loader_args = dict(batch_size=batch_size, num_workers=0 if os.name =='nt' else os.cpu_count(), pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
@@ -180,6 +182,7 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--n_channels', '-ch', type=int, default=3, help='Number of classes')
 
     return parser.parse_args()
 
@@ -194,7 +197,7 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
-    model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    model = UNetImprove(n_channels=args.n_channels, n_classes=args.classes, bilinear=args.bilinear)
     model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
@@ -209,11 +212,13 @@ if __name__ == '__main__':
         logging.info(f'Model loaded from {args.load}')
 
     model.to(device=device)
+    category_list = [str(i) for i in range(args.classes)]
     try:
         train_model(
             model=model,
             epochs=args.epochs,
             batch_size=args.batch_size,
+            category_list=category_list,
             learning_rate=args.lr,
             device=device,
             img_scale=args.scale,

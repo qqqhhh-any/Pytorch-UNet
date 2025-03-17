@@ -1,5 +1,26 @@
+import os
+
 import matplotlib.pyplot as plt
 
+
+def file_name_without_extension(file_path):
+    return os.path.basename(file_path)[:os.path.basename(file_path).rfind('.')]
+
+def is_image_file(file: str) -> bool:
+    image_extensions = ['.jpg', '.jpeg', '.png', '.tif','.bmp']
+    extension = file[file.rfind('.'):]
+    if extension in image_extensions:
+        return True
+    else:
+        return False
+
+def is_label_file(file:str)->bool:
+    label_extensions = ['.json']
+    extension = file[file.rfind('.'):]
+    if extension in label_extensions:
+        return True
+    else:
+        return False
 
 def plot_img_and_mask(img, mask):
     classes = mask.max() + 1
