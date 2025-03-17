@@ -36,7 +36,7 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
 
 
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str = ''):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str = '',category_list: list[str]=['0','1']):
         self.images_dir = Path(images_dir)
         self.mask_dir = Path(mask_dir)
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
@@ -48,14 +48,17 @@ class BasicDataset(Dataset):
             raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
 
         logging.info(f'Creating dataset with {len(self.ids)} examples')
-        logging.info('Scanning mask files to determine unique values')
-        with Pool() as p:
-            unique = list(tqdm(
-                p.imap(partial(unique_mask_values, mask_dir=self.mask_dir, mask_suffix=self.mask_suffix), self.ids),
-                total=len(self.ids)
-            ))
 
-        self.mask_values = list(sorted(np.unique(np.concatenate(unique), axis=0).tolist()))
+        # skip
+        # logging.info('Scanning mask files to determine unique values')
+        # with Pool() as p:
+        #     unique = list(tqdm(
+        #         p.imap(partial(unique_mask_values, mask_dir=self.mask_dir, mask_suffix=self.mask_suffix), self.ids),
+        #         total=len(self.ids)
+        #     ))
+
+        # self.mask_values = list(sorted(np.unique(np.concatenate(unique), axis=0).tolist()))
+        self.mask_values = [index for index,i in enumerate(category_list)]
         logging.info(f'Unique mask values: {self.mask_values}')
 
     def __len__(self):
@@ -113,5 +116,5 @@ class BasicDataset(Dataset):
 
 
 class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, mask_dir, scale=1):
-        super().__init__(images_dir, mask_dir, scale, mask_suffix='_mask')
+    def __init__(self, images_dir, mask_dir, scale=1,category_list=['0','1']):
+        super().__init__(images_dir, mask_dir, scale, mask_suffix='_mask',category_list=category_list)

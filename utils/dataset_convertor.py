@@ -2,7 +2,7 @@ import json
 import os
 from os import PathLike
 from typing import Union
-
+from utils.utils import is_label_file,is_image_file,file_name_without_extension
 import cv2
 import numpy as np
 
@@ -77,24 +77,7 @@ def generate_masks_from_json(json_data:dict[str,object],category_list:list[str])
     return mask_canvas
 
 
-def is_image_file(file: str) -> bool:
-    image_extensions = ['.jpg', '.jpeg', '.png', '.tif','.bmp']
-    extension = file[file.rfind('.'):]
-    if extension in image_extensions:
-        return True
-    else:
-        return False
 
-def is_label_file(file:str)->bool:
-    label_extensions = ['.json']
-    extension = file[file.rfind('.'):]
-    if extension in label_extensions:
-        return True
-    else:
-        return False
-
-def file_name_without_extension(file_path):
-    return os.path.basename(file_path)[:os.path.basename(file_path).rfind('.')]
 
 def convert_coco_to_masks(src_images_path:Union[PathLike,str],
                           src_labels_path:Union[PathLike,str],
@@ -122,6 +105,8 @@ def convert_coco_to_masks(src_images_path:Union[PathLike,str],
             save_image = cv2.imread(image_file,cv2.IMREAD_UNCHANGED)
             json_data = json.load(f)
             save_mask = generate_masks_from_json(json_data,category_list=src_category_list)
+            if len(save_image.shape)==2 or save_image.shape[2]==1:
+                save_image = cv2.cvtColor(save_image,cv2.COLOR_GRAY2BGR)
 
             if use_letterbox:
                 save_image = letterbox(save_image, target_size)
